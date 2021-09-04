@@ -230,7 +230,7 @@ htmltools::save_html(p2,"p2.html")
 
 Grafikas labai didelis todėl jį reikia atidaryti atskirai.
 
-[Grafiką galima pamatyti čia](P2.html) 
+[Grafiką galima pamatyti čia](p2.html) 
 
 
 .pull-right[<img src="https://images.emojiterra.com/google/android-10/512px/1f914.png" alt="emoji" width="300"/>]
