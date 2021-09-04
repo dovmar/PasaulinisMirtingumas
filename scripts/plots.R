@@ -34,6 +34,7 @@ x_1 <- x %>%
     continent = factor(continent, labels = c("Afrika", "Amerikos", "Azija", "Europa", "Okeanija"))
   )
 
+write_csv(x_1,here("data/output/global_mortality_clean.csv"))
 
 y <- read_csv(here("data/input/WPP2019_Period_Indicators_Medium.csv"))
 
@@ -46,6 +47,7 @@ y_1 <- y %>%
   ) %>%
   drop_na(continent)
 
+write_csv(y_1,here("data/output/WPP2019_clean.csv"))
 
 thm <- hc_theme_merge(
   hc_theme_smpl(),
