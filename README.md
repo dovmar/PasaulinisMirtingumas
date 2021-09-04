@@ -57,7 +57,7 @@ Analizei atlikti naudoti 2 duomenų šaltiniai:
 -   countrycode
 -   here
 -   ggrepel
--   Xaringan
+-   xaringan
 
 ## Rezultatai
 
