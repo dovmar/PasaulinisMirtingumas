@@ -1,6 +1,3 @@
-Pasaulinio mirtingumo vizualizacija
-================
-
 ## Tikslai
 
 Šiuo tiriamuoju projektu siekiama ištirti aktualias su žmonių mirtingumu
