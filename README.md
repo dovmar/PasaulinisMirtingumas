@@ -1,6 +1,5 @@
 Pasaulinio mirtingumo vizualizacija
 ================
-Dovydas Martinkus
 
 ## Tikslai
 
@@ -62,5 +61,5 @@ Analizei atlikti naudoti 2 duomenų šaltiniai:
 
 ## Rezultatai
 
-Analizės rezultatus galima rasti [čia](report/slides.html) (rezultatai
+Analizės rezultatus galima rasti [čia](docs/slides.html) (rezultatai
 pateikti skaidrių formatu).
