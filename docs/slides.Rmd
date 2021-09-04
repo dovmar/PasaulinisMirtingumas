@@ -1,0 +1,640 @@
+---
+title: "Pasaulinio mirtingumo vizualizacija"
+author: "Dovydas Martinkus"
+date: "2021"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    css: xaringan-themer.css
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE,htmltools.preserve.raw = FALSE)
+library(highcharter)
+library(ggplot2)
+library(hrbrthemes)
+library(here)
+
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+```
+
+```{r xaringan-themer, include=FALSE}
+library(xaringanthemer)
+style_mono_accent(
+  base_color = "#272822", 
+  link_color = "rgb(249, 38, 114)",
+  text_font_google = google_font("Roboto condensed")
+)
+
+load(here("data/output/plots.Rda"))
+```
+
+# Tematika, tikslas ir uždaviniai
+
+
+Šiuo tiriamuoju projektu siekiama ištirti aktualias su žmonių mirtingumu susijusias charakteristikas ir joms pateikti pritaikyti duomenų vizualizavimo metodus.
+
+
+--
+
+Tyrimo tikslas padalintas į tris smulkesnius uždavinius.
+
+Surasti ir vizualizuoti:
+
+--
+
+
+- Pagrindines mirčių priežasčių, mirčių kiekio pokyčio tendencijas per paskutinius kelis dešimtmečius.
+
+--
+
+- Šalis (regionus) išsiskiriančias tam tikrais specifiškais mirtingumo rodikliais.
+
+--
+
+- Įvairių regionų bendresnius mirtingumo profilius, juos palyginti tarpusavyje.
+
+
+---
+
+# Duomenys
+
+
+--
+
+.pull-left[**Pirmas duomenų šaltinis:**
+
+[Our World in Data](https://ourworldindata.com)
+
+Istoriniai mirties priežasčių duomenys:
+
+- šalis ar regionas
+- metai
+- 32 procentinės dalies mirčių dėl tam tikros priežasties kintamieji (širdies ligos, vėžiai, diabetas ir t.t.)]
+
+--
+
+.pull-right[**Antras duomenų šaltinis:**
+
+[United Nations Department of Economic and Social Affairs](https://population.un.org/wpp/Download/Standard/CSV/)
+
+Bendresni mirtingumo/gimstamumo duomenys (istoriniai ir ateities projekcija):
+
+- šalis ar regionas
+- laikmetis
+- vyrų/moterų/bendra gyvenimo trukmė
+- mirčių/gimimų skaičius 1000 gyventojų
+- naujagimių/iki 5 metų mirtys 1000 gimimų
+- kiti kintamieji
+]
+
+---
+
+### Naudoti metodai, duomenų sutvarkymas
+
+```{r eval=FALSE}
+
+library(tidyverse)
+library(highcharter)
+library(hrbrthemes)
+library(ggrepel)
+library(countrycode)
+
+# Pirmas duomenų rinkinys
+x <- readxl::read_xlsx("global_mortality.xlsx")
+x <- x %>%
+  mutate(across(where(is.numeric), ~ round(.x, 2)))
+x <- x %>% janitor::clean_names(case = "sentence")
+names(x)[4:35] <- c(
+  "Širdies ligos", "Vėžiai", "Kvepavimo ligos", "Diabetas", "Demencija", "Apatinių kvepavimo takų infekcijos",
+  "Naujagimių mirtys", "Viduriavimo ligos", "Kelių įvykiai", "Inkstų ligos", "Tuberkuliozė", "Kepenų ligos", "Virškinimo ligos", "AIDS",
+  "Savižudybė", "Maliarija", "Žmogžudystės", "Neprievalgis", "Meningitas", "Proteinų trūkumas", "Skendimas", "Mirtys gimdant", "Parkinsono liga",
+  "Alkoholis", "Virškinimo infekcijos", "Narkotikai", "Hepatitas", "Gaisras", "Šaltis arba karštis", "Gamtos katastrofos", "Konfliktai", "Terorizmas"
+)
+
+urlico <- "url(https://raw.githubusercontent.com/tugmaks/flags/2d15d1870266cf5baefb912378ecfba418826a79/flags/flags-iso/flat/24/%s.png)"
+```
+
+---
+
+### Naudoti metodai, duomenų sutvarkymas
+
+```{r eval=FALSE}
+# Antras duomenų rinkinys
+y <- read_csv("WPP2019_Period_Indicators_Medium.csv")
+
+y_1 <- y %>%
+  filter(MidPeriod %in% 1960:2018) %>%
+  mutate(
+    continent = countrycode(Location, origin = "country.name", destination = "continent"),
+    continent = factor(continent, labels = c("Afrika", "Amerikos", "Azia", "Europa", "Okeanija")),
+    # Lietuviški šalių pavadinimai
+    LocationLT = countrycode(Location, origin = "country.name", destination = "cldr.variant.lt")
+  ) %>%
+  drop_na(continent)
+
+```
+
+
+---
+
+### 1.
+
+```{r eval=FALSE}
+# Duomenų pertvarkymas į reikalingą formatą norimai vizualizacijai
+
+# Stulpelių duomenys
+x_8 <- x %>% filter(Country == "World", Year == 2016) %>%
+  select(1, 4:10) %>%  pivot_longer(2:8) %>%
+  rbind(., x %>%
+    filter(Year == 2016, Country == "World") %>% select(-(2:10)) %>%
+    pivot_longer(-1) %>% drop_na() %>% group_by(Country) %>%
+      summarize(Kitos = sum(value)) %>% pivot_longer(-1))
+
+# Linijinio grafiko duomenys
+x_9 <- x %>%
+  filter(Country == "World") %>% select(1, 3:10) %>%  pivot_longer(3:9) %>%
+  rbind(., x %>%
+    filter(Country == "World") %>% select(-(c(2, 4:10))) %>%
+    pivot_longer(-(1:2)) %>% drop_na() %>% group_by(Country, Year) %>%
+    summarize(Kitos = sum(value)) %>% pivot_longer(-(1:2))) %>% group_nest(name) %>%
+  mutate(
+    data = map(data, mutate_mapping, hcaes(x = Year, y = value), drop = TRUE),
+    data = map(data, list_parse)
+  ) %>% left_join(x_8, by = c("name" = "name"))
+```
+
+
+---
+
+
+### 1.
+
+```{r eval=FALSE}
+# Vizualizacijos sudarymas
+hchart(x_9,
+  type = "column", hcaes(x = name, y = value, name = name),
+  colorByPoint = TRUE, showInLegend = FALSE, pointWidth = 50,
+  pointPadding = 0, groupPadding = 0, pointPlacement = "on"
+) %>% hc_xAxis(type = "category") %>%
+  hc_tooltip(
+    pointFormatter = tooltip_chart(
+      accesor = "data",
+      hc_opts = list(
+        chart = list(type = "line"), credits = list(enabled = FALSE),
+        plotOptions = list(line = list(marker = list(enabled = FALSE), 
+                                  label = list(enabled = FALSE), lineWidth = 3))),
+      height = 225, width = 300),useHTML = TRUE) %>%
+  hc_title(text = "Mirties priežasčių pokytis", align = "left") %>%
+  hc_yAxis(title = list(text = "Mirtys"), 
+           labels = list(format = "{value}%")) %>%
+  hc_xAxis(
+    title = list(text = "Kategorija"), tickmarkPlacement = "on", min = -1,
+    max = 8.5, showFirstLabel = FALSE, showLastLabel = FALSE)
+```
+
+---
+
+### 1.
+
+```{r echo=FALSE}
+p1
+```
+
+---
+
+### Pastebėjimai
+
+
+--
+
+- Didėja senų žmonių mirtingumo priežasčių skaičiai, mažėja jaunų žmonių pvz. kūdikių mirtingumas. 
+
+--
+
+- Žmonės gyvena ilgiau – miršta vėliau nuo senatvėje pasireiškiančių ligų. 
+
+---
+
+### 2.
+
+
+```{r echo=FALSE}
+htmltools::save_html(p2,"p2.html")
+```
+
+Grafikas labai didelis todėl jį reikia atidaryti atskirai.
+
+[Grafiką galima pamatyti čia](P2.html) 
+
+
+.pull-right[<img src="https://images.emojiterra.com/google/android-10/512px/1f914.png" alt="emoji" width="300"/>]
+
+---
+
+### Pastebėjimai
+
+
+- Didėja senų žmonių mirtingumo priežasčių skaičiai, mažėja jaunų žmonių pvz. kūdikių mirtingumas. 
+
+- Žmonės gyvena ilgiau – miršta vėliau nuo senatvėje pasireiškiančių ligų. 
+
+--
+
+- Tuberkuliozė, badas, hepatitas – šios mirties priežastys traukiasi. 
+
+--
+
+- ŽIV ir maliarija tiriamame laikotarpyje pasiekusi aukščiausią tašką, bet dabar taip pat mažėja. 
+
+--
+
+- Auga kepenų ir inkstų, narkotikų, diabeto, demencijos bei terorizmo sukeltų mirčių skaičiai. 
+
+
+---
+
+### 3.
+
+```{r echo=FALSE}
+p3
+```
+
+---
+
+
+
+### Pastebėjimai
+
+
+- Didėja senų žmonių mirtingumo priežasčių skaičiai, mažėja jaunų žmonių pvz. kūdikių mirtingumas. 
+
+- Žmonės gyvena ilgiau – miršta vėliau nuo senatvėje pasireiškiančių ligų. 
+
+- Tuberkuliozė, badas, hepatitas – šios mirties priežastys traukiasi. 
+
+- ŽIV ir maliarija tiriamame laikotarpyje pasiekusi aukščiausią tašką, bet dabar taip pat mažėja. 
+
+- Auga kepenų ir inkstų, narkotikų, diabeto, demencijos bei terorizmo sukeltų mirčių skaičiai. 
+
+
+--
+
+- Pagal specifines mirties priežastis pasaulyje pirmaujančios šalys neretai išlieka pirmaujančios daugelį metų iš eilės. Pvz: CAR pagal tuberkuliozę, Egiptas pagal inkstų ligas.
+
+---
+
+### 4.
+
+```{r eval=FALSE}
+# Duomenų pertvarkymas į reikalingą formatą norimai vizualizacijai
+
+# Randamos šalys išskirtys
+which <- y_1 %>%
+  group_by(Location) %>%  select(Location, MidPeriod, LEx) %>%
+  distinct(Location, MidPeriod, .keep_all = TRUE) %>%
+  pivot_wider(c(Location, MidPeriod), names_from = MidPeriod, values_from = LEx) %>%
+  drop_na() %>% mutate(diff = `2018` - `1963`) %>% arrange(diff) %>%
+  pull(Location)
+
+# Išrenkami jų duomenys
+y_9 <- y_1 %>%
+  mutate(group = ifelse(Location %in% which[1:5], "Smallest",
+    ifelse(Location %in% rev(which)[1:5], "Largest", "0")
+  )) %>% filter(group != "0")
+
+# Lyginama su visu pasauliu
+world <- y %>% filter(Location == "World") %>% select(-Location)
+```
+
+
+---
+
+### 4.
+
+```{r eval=FALSE}
+# Grafiko sudarymas
+ggplot(y_9, aes(x = MidPeriod, y = LEx, color = continent, group = LocationLT)) +
+  geom_line(size = 2) +
+  facet_wrap(vars(group, LocationLT),ncol = 5,
+    labeller = labeller(group = function(x) {
+      substr(x, 0, 0)
+    }, Location = label_value)) +
+  scale_color_viridis_d("Žemynas") +
+  theme_ipsum(
+    base_size = 25, plot_title_size = 30, subtitle_size = 25,
+    axis_title_size = 20, strip_text_size = 25, axis_text_size = 20
+  ) +
+  theme(panel.grid.minor = element_blank(), legend.position = "right") +
+  labs(title = "Didžiausi ir mažiausi gyvenimo trukmės padidėjimai",
+    subtitle = "Palygininus su pasauliniu augimu"
+  ) + xlab("Metai") + ylab("Gyvenimo trukmė") +
+  scale_x_continuous(breaks = c(1960, 1990, 2020), limits = c(1959, 2020)) +
+  geom_line(data = world, inherit.aes = FALSE, aes(x = MidPeriod, y = LEx),
+            color = "black", size = 2, alpha = 0.2)
+```
+
+---
+
+
+### 4.
+
+```{r echo=FALSE,fig.width=15, fig.height=10}
+p4
+```
+
+---
+
+
+### Pastebėjimai
+
+
+- Didėja senų žmonių mirtingumo priežasčių skaičiai, mažėja jaunų žmonių pvz. kūdikių mirtingumas. 
+
+- Žmonės gyvena ilgiau – miršta vėliau nuo senatvėje pasireiškiančių ligų. 
+
+- Tuberkuliozė, badas, hepatitas – šios mirties priežastys traukiasi. 
+
+- ŽIV ir maliarija tiriamame laikotarpyje pasiekusi aukščiausią tašką, bet dabar taip pat mažėja. 
+
+- Auga kepenų ir inkstų, narkotikų, diabeto, demencijos bei terorizmo sukeltų mirčių skaičiai. 
+
+
+- Pagal specifines mirties priežastis pasaulyje pirmaujančios šalys neretai išlieka pirmaujančios daugelį metų iš eilės. Pvz: CAR pagal tuberkuliozę, Egiptas pagal inkstų ligas.
+
+--
+
+- Azijos šalys pasižymėjo didžiausiu gyvenimo trukmės augimu.
+
+--
+
+- Mažiausias pokytis matomas buvusio rytų bloko šalyse. Išskirtis – Afrikos valstybė Lesotas. 
+
+---
+
+
+### 5.
+
+```{r echo=FALSE,fig.width=15, fig.height=10}
+p5
+```
+
+---
+
+
+### Pastebėjimai
+
+
+--
+
+- Pagal didelį gimimų ir mirčių kiekį kai kurios Afrikos valstybės vis dar stipriai išsiskiria.
+
+--
+
+- Europa, ypač rytų, išskirtinai pasižymi aukštu mirčių skaičiumi – tai senstančios populiacijos ženklas.
+
+---
+
+
+### 6.
+
+```{r echo=FALSE}
+p6
+```
+
+---
+
+### Pastebėjimai
+
+
+
+- Pagal didelį gimimų ir mirčių kiekį kai kurios Afrikos valstybės vis dar stipriai išsiskiria.
+
+
+- Europa, ypač rytų, išskirtinai pasižymi aukštu mirčių skaičiumi – tai senstančios populiacijos ženklas.
+
+--
+
+- Moterų gyvenimo trukmė visose šalyse didesnė. 
+
+--
+
+- Rytų Europos - Vidurio Azijos regionui būdinga trumpesnė vyrų gyvenimo trukmė nei moterų.
+
+---
+
+
+### 7.
+
+```{r echo=FALSE,fig.width=15, fig.height=10}
+p7
+```
+
+---
+
+### Pastebėjimai
+
+
+
+- Pagal didelį gimimų ir mirčių kiekį kai kurios Afrikos valstybės vis dar stipriai išsiskiria.
+
+- Europa, ypač rytų, išskirtinai pasižymi aukštu mirčių skaičiumi – tai senstančios populiacijos ženklas.
+
+- Moterų gyvenimo trukmė visose šalyse didesnė. 
+
+- Rytų Europos - Vidurio Azijos regionui būdinga trumpesnė vyrų gyvenimo trukmė nei moterų.
+
+--
+
+- Persijos įlankos šalys išsiskiria panašia vyrų ir moterų gyvenimo trukme, bet didesniu vyrų mirčių kiekiu. Tuo tarpu Rytų Europos šalyse vyrų mirčių mažiau.
+
+---
+
+### 8.
+
+```{r echo=FALSE}
+p8
+```
+
+---
+
+
+### Pastebėjimai
+
+
+
+- Pagal didelį gimimų ir mirčių kiekį kai kurios Afrikos valstybės vis dar stipriai išsiskiria.
+
+- Europa, ypač rytų, išskirtinai pasižymi aukštu mirčių skaičiumi – tai senstančios populiacijos ženklas.
+
+
+- Moterų gyvenimo trukmė visose šalyse didesnė. 
+
+- Rytų Europos - Vidurio Azijos regionui būdinga trumpesnė vyrų gyvenimo trukmė nei moterų.
+
+- Persijos įlankos šalys išsiskiria panašia vyrų ir moterų gyvenimo trukme, bet didesniu vyrų mirčių kiekiu. Tuo tarpu Rytų Europos šalyse vyrų mirčių mažiau.
+
+
+--
+
+- Pagal alkoholį ir savižudybes išsiskiria Rytų Europos, taip pat kelios Skandinavijos šalys. Grenlandija pirmauja pagal abu kriterijus.
+
+---
+
+
+### 9.
+
+```{r echo=FALSE,fig.width=15, fig.height=10}
+p9
+```
+
+---
+
+
+### Pastebėjimai
+
+
+
+- Pagal didelį gimimų ir mirčių kiekį kai kurios Afrikos valstybės vis dar stipriai išsiskiria.
+
+- Europa, ypač rytų, išskirtinai pasižymi aukštu mirčių skaičiumi – tai senstančios populiacijos ženklas.
+
+- Moterų gyvenimo trukmė visose šalyse didesnė. 
+
+- Rytų Europos - Vidurio Azijos regionui būdinga stipriai trumpesnė vyrų gyvenimo trukmė nei moterų.
+
+- Persijos įlankos šalys išsiskiria panašia vyrų ir moterų gyvenimo trukme, bet didesniu vyrų mirčių kiekiu. Tuo tarpu Rytų Europos šalyse vyrų mirčių mažiau.
+
+
+
+- Pagal alkoholį ir savižudybes išsiskiria Rytų Europos, taip pat kelios Skandinavijos šalys. Grenlandija pirmauja pagal abu kriterijus.
+
+--
+
+- Matoma Afrikos AIDS ir neprievalgio problema. Didžiausia AIDS problema Pietinėje Afrikoje, tačiau šis regionas pasižymi palyginus maža mirčių nuo neprievalgio dalimi.
+
+---
+
+### 10.
+
+```{r echo=FALSE}
+p10
+```
+
+---
+
+
+### Pastebėjimai
+
+
+--
+
+
+- Šiuo metu aukštu gimimų ir mirčių kiekiu vis dar išsiskiria Afrikos žemynas, tik Europoje mirčių skaičius didesnis už gimimų.
+
+
+--
+
+- Tačiau pastebimas stiprus žemynų supanašėjimas mirčių ir gimimų kiekio atžvilgiu. 
+
+---
+
+
+### 11.
+
+```{r echo=FALSE}
+p11
+```
+
+
+---
+
+
+### Pastebėjimai
+
+
+
+- Šiuo metu aukštu gimimų ir mirčių kiekiu vis dar išsiskiria Afrikos žemynas, tik Europoje mirčių skaičius didesnis už gimimų.
+
+
+- Tačiau pastebimas stiprus žemynų supanašėjimas mirčių ir gimimų kiekio atžvilgiu. 
+
+--
+
+- Didesnio išsivystymo regionuose paplitusios mirtys nuo širdies ligų, vėžių. Mežesnio išsivystymo regionuose mirties priežastys įvairesnės
+
+
+---
+
+
+### 12.
+
+```{r echo=FALSE}
+p12
+```
+
+---
+
+
+### Pastebėjimai
+
+
+
+- Šiuo metu aukštu gimimų ir mirčių kiekiu vis dar išsiskiria Afrikos žemynas, tik Europoje mirčių skaičius didesnis už gimimų.
+
+
+- Tačiau pastebimas stiprus žemynų supanašėjimas mirčių ir gimimų kiekio atžvilgiu. 
+
+
+- Didesnio išsivystymo regionuose paplitusios mirtys nuo širdies ligų, vėžių. Mažesnio išsivystymo regionuose mirties priežastys įvairesnės.
+
+--
+
+- Aukštos gyvenimo trukmės regionuose pagrindinės mirties priežastys - senatvinės, širdies ligos ir vėžiai. 
+
+--
+
+- Žemos gyvenimo trukmės regionuose didelė dalis miršta nuo tuberkuliozės, maliarijos, AIDS, viduriavimo ligų, mirtys nuo kurių nėra paplitusios aukštos gyvenimo trukmės regionuose.
+
+---
+
+# Išvados
+
+--
+
+Demografiniai pasaulio valstybių duomenys pasirodė optimistiški. Mažėja epidemiologinių mirčių skaičiai. ŽIV/AIDS bei maliarijos pikas sukeltų mirčių pikas jau praeityje.
+
+--
+
+Daugėja mirčių nuo vėžio ir širdies ligų. Tokios mirtys dažniausiai ištinka senus žmones. 
+
+--
+
+Kyla ir nauji modernaus gyvenimo iššūkiai: auga mirtys nuo diabeto, terorizmo.
+
+--
+
+Vyrų/moterų gyvenimo trukmė yra ir Lietuvą išskiriantis rodiklis. Senasis rytų blokas šiuo rodikliu išsiskiria iš viso pasaulio. Šios Rytų Europos šalys, kartu su kai kuriomis Skandinavijos šalimis taip pat pasižymi dideliu mirčių nuo alkoholio kiekiu palyginus su likusiu pasauliu.
+
+--
+
+Centro ir Pietinė Afrika vis dar kenčia nuo bado ir ŽIV/AIDS pandemijos.
+
+--
+
+Bendrame vaizde neeuropietiški pasaulio regionai keliauja demografiniu vakarų pavyzdžiu:  gimstamumas mažėja kartu su mirtingumu, tačiau po to seka mirtingumo didėjimas. 
+
+--
+
+Didelės gyvenimo trukmės regionuose pagrindinės mirties priežastys yra senatvinės, širdies ligos, vėžiai. 
+
+--
+
+Nepaisant gerėjančios padėties stipriai kitoks mirties priežasčių profilis yra regionuose su maža gyvenimo trukme: juose dar daug naujagimių mirčių, mirčių nuo tuberkuliozės, viduriavimo lygų, neprievalgio.
+
+---
