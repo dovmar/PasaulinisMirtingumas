@@ -1,5 +1,3 @@
-
-
 # Duomenų nuskaitymas ----------
 
 library(tidyverse)
