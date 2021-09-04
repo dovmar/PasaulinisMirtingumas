@@ -100,7 +100,7 @@ Bendresni mirtingumo/gimstamumo duomenys (istoriniai ir ateities projekcija):
 ```{r eval=FALSE}
 
 library(tidyverse)
-*library(highcharter)
+library(highcharter)
 library(hrbrthemes)
 library(ggrepel)
 library(countrycode)
@@ -125,20 +125,6 @@ urlico <- "url(https://raw.githubusercontent.com/tugmaks/flags/2d15d1870266cf5ba
 ### Naudoti metodai, duomenų sutvarkymas
 
 ```{r eval=FALSE}
-x_1 <- x %>%
-  mutate(countrycode = countrycode(Country, origin = "country.name", destination = "iso2c")) %>%
-  mutate(
-    marker = sprintf(urlico, countrycode),
-    marker = map(marker, function(x) list(symbol = x)),
-    # Šalių vėliavos
-    flagicon = sprintf(urlico, countrycode),
-    flagicon = str_replace_all(flagicon, "url\\(|\\)", ""),
-    continent = countrycode(Country, origin = "country.name", destination = "continent"),
-    # Lietuviški šalių pavadinimai
-    CountryLT = countrycode(Country, origin = "country.name", destination = "cldr.variant.lt"),
-    continent = factor(continent, labels = c("Afrika", "Amerikos", "Azija", "Europa", "Okeanija"))
-  )
-
 # Antras duomenų rinkinys
 y <- read_csv("WPP2019_Period_Indicators_Medium.csv")
 
@@ -163,31 +149,24 @@ y_1 <- y %>%
 # Duomenų pertvarkymas į reikalingą formatą norimai vizualizacijai
 
 # Stulpelių duomenys
-x_8 <- x %>% filter(Country == "World", Year == 2016)
-x_8 <- x_8 %>%
-  select(1, 4:10) %>%
-  pivot_longer(2:8) %>%
+x_8 <- x %>% filter(Country == "World", Year == 2016) %>%
+  select(1, 4:10) %>%  pivot_longer(2:8) %>%
   rbind(., x %>%
-    filter(Year == 2016, Country == "World") %>%
-    select(-(2:10)) %>%
-    pivot_longer(-1) %>% drop_na() %>% group_by(Country) %>% summarize(Kitos = sum(value)) %>% pivot_longer(-1))
+    filter(Year == 2016, Country == "World") %>% select(-(2:10)) %>%
+    pivot_longer(-1) %>% drop_na() %>% group_by(Country) %>%
+      summarize(Kitos = sum(value)) %>% pivot_longer(-1))
 
 # Linijinio grafiko duomenys
 x_9 <- x %>%
-  filter(Country == "World") %>%
-  select(1, 3:10) %>%
-  pivot_longer(3:9) %>%
+  filter(Country == "World") %>% select(1, 3:10) %>%  pivot_longer(3:9) %>%
   rbind(., x %>%
-    filter(Country == "World") %>%
-    select(-(c(2, 4:10))) %>%
+    filter(Country == "World") %>% select(-(c(2, 4:10))) %>%
     pivot_longer(-(1:2)) %>% drop_na() %>% group_by(Country, Year) %>%
-    summarize(Kitos = sum(value)) %>% pivot_longer(-(1:2))) %>%
-  group_nest(name) %>%
+    summarize(Kitos = sum(value)) %>% pivot_longer(-(1:2))) %>% group_nest(name) %>%
   mutate(
     data = map(data, mutate_mapping, hcaes(x = Year, y = value), drop = TRUE),
     data = map(data, list_parse)
-  ) %>%
-  left_join(x_8, by = c("name" = "name"))
+  ) %>% left_join(x_8, by = c("name" = "name"))
 ```
 
 
@@ -201,29 +180,22 @@ x_9 <- x %>%
 hchart(x_9,
   type = "column", hcaes(x = name, y = value, name = name),
   colorByPoint = TRUE, showInLegend = FALSE, pointWidth = 50,
-  pointPadding = 0, groupPadding = 0,
-  pointPlacement = "on"
-) %>%
-  hc_xAxis(type = "category") %>%
+  pointPadding = 0, groupPadding = 0, pointPlacement = "on"
+) %>% hc_xAxis(type = "category") %>%
   hc_tooltip(
     pointFormatter = tooltip_chart(
       accesor = "data",
       hc_opts = list(
         chart = list(type = "line"), credits = list(enabled = FALSE),
-        plotOptions = list(line = list(marker = list(enabled = FALSE), label = list(enabled = FALSE), lineWidth = 3))
-      ),
-      height = 225, width = 300
-    ),
-    useHTML = TRUE
-  ) %>%
+        plotOptions = list(line = list(marker = list(enabled = FALSE), 
+                                  label = list(enabled = FALSE), lineWidth = 3))),
+      height = 225, width = 300),useHTML = TRUE) %>%
   hc_title(text = "Mirties priežasčių pokytis", align = "left") %>%
-  hc_yAxis(title = list(text = "Mirtys"), labels = list(format = "{value}%")) %>%
+  hc_yAxis(title = list(text = "Mirtys"), 
+           labels = list(format = "{value}%")) %>%
   hc_xAxis(
     title = list(text = "Kategorija"), tickmarkPlacement = "on", min = -1,
-    max = 8.5, showFirstLabel = FALSE,
-    showLastLabel = FALSE
-  ) %>%
-  hc_add_theme(thm)
+    max = 8.5, showFirstLabel = FALSE, showLastLabel = FALSE)
 ```
 
 ---
@@ -252,9 +224,13 @@ p1
 ### 2.
 
 
+```{r echo=FALSE}
+htmltools::save_html(p2,"p2.html")
+```
+
 Grafikas labai didelis todėl jį reikia atidaryti atskirai.
 
-[Grafiką galima pamatyti čia](https://dovmar.github.io/Duomenu_Vizualizavimas/Tiriamasis_2_grafikas.html) 
+[Grafiką galima pamatyti čia](P2.html) 
 
 
 .pull-right[<img src="https://images.emojiterra.com/google/android-10/512px/1f914.png" alt="emoji" width="300"/>]
@@ -320,26 +296,20 @@ p3
 
 # Randamos šalys išskirtys
 which <- y_1 %>%
-  group_by(Location) %>%
-  select(Location, MidPeriod, LEx) %>%
+  group_by(Location) %>%  select(Location, MidPeriod, LEx) %>%
   distinct(Location, MidPeriod, .keep_all = TRUE) %>%
   pivot_wider(c(Location, MidPeriod), names_from = MidPeriod, values_from = LEx) %>%
-  drop_na() %>%
-  mutate(diff = `2018` - `1963`) %>%
-  arrange(diff) %>%
+  drop_na() %>% mutate(diff = `2018` - `1963`) %>% arrange(diff) %>%
   pull(Location)
 
 # Išrenkami jų duomenys
 y_9 <- y_1 %>%
   mutate(group = ifelse(Location %in% which[1:5], "Smallest",
     ifelse(Location %in% rev(which)[1:5], "Largest", "0")
-  )) %>%
-  filter(group != "0")
+  )) %>% filter(group != "0")
 
 # Lyginama su visu pasauliu
-world <- y %>%
-  filter(Location == "World") %>%
-  select(-Location)
+world <- y %>% filter(Location == "World") %>% select(-Location)
 ```
 
 
@@ -351,26 +321,22 @@ world <- y %>%
 # Grafiko sudarymas
 ggplot(y_9, aes(x = MidPeriod, y = LEx, color = continent, group = LocationLT)) +
   geom_line(size = 2) +
-  facet_wrap(vars(group, LocationLT),
-    ncol = 5,
+  facet_wrap(vars(group, LocationLT),ncol = 5,
     labeller = labeller(group = function(x) {
       substr(x, 0, 0)
-    }, Location = label_value)
-  ) +
+    }, Location = label_value)) +
   scale_color_viridis_d("Žemynas") +
   theme_ipsum(
     base_size = 25, plot_title_size = 30, subtitle_size = 25,
     axis_title_size = 20, strip_text_size = 25, axis_text_size = 20
   ) +
   theme(panel.grid.minor = element_blank(), legend.position = "right") +
-  labs(
-    title = "Didžiausi ir mažiausi gyvenimo trukmės padidėjimai",
+  labs(title = "Didžiausi ir mažiausi gyvenimo trukmės padidėjimai",
     subtitle = "Palygininus su pasauliniu augimu"
-  ) +
-  xlab("Metai") +
-  ylab("Gyvenimo trukmė") +
+  ) + xlab("Metai") + ylab("Gyvenimo trukmė") +
   scale_x_continuous(breaks = c(1960, 1990, 2020), limits = c(1959, 2020)) +
-  geom_line(data = world, inherit.aes = FALSE, aes(x = MidPeriod, y = LEx), color = "black", size = 2, alpha = 0.2)
+  geom_line(data = world, inherit.aes = FALSE, aes(x = MidPeriod, y = LEx),
+            color = "black", size = 2, alpha = 0.2)
 ```
 
 ---

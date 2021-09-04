@@ -507,7 +507,7 @@ p10 <- highchart() %>%
     ))
   )) %>%
   hc_add_theme(thm) %>%
-  hc_size(width = 1000)
+  hc_size(width = 700)
 
 
 ## 11 ---------------------
