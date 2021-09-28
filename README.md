@@ -1,5 +1,7 @@
 ## Tikslai
 
+<img src="hospital.png" align="right" width="140" />
+
 Šiuo tiriamuoju projektu siekiama ištirti aktualias su žmonių mirtingumu
 susijusias charakteristikas ir joms pateikti pritaikyti duomenų
 vizualizavimo metodus.
