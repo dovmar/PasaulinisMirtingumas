@@ -6,6 +6,7 @@
 susijusias charakteristikas ir joms pateikti pritaikyti duomenų
 vizualizavimo metodus.
 
+<br><br>
 Tyrimo tikslas padalintas į tris smulkesnius uždavinius.
 
 Surasti ir vizualizuoti:
