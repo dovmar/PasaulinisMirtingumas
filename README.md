@@ -1,65 +1,42 @@
-## Tikslai
+## Goals
 
-<img src="hospital.png" align="right" width="140" />
+<img src="microphone.png" align="right" width="140" />
 
-Šiuo tiriamuoju projektu siekiama ištirti aktualias su žmonių mirtingumu
-susijusias charakteristikas ir joms pateikti pritaikyti duomenų
-vizualizavimo metodus.
+Analyse artist collaboration in Billboard Hot 100 songs:
 
-<br><br>
-Tyrimo tikslas padalintas į tris smulkesnius uždavinius.
+- Create a graph from the data
 
-Surasti ir vizualizuoti:
+- Calculate graph measures of interest
 
--   Pagrindines mirčių priežasčių, mirčių kiekio pokyčio tendencijas per
-    paskutinius kelis dešimtmečius.
+- Use visualization methods to finds useful patterns in the graph
 
--   Šalis (regionus) išsiskiriančias tam tikrais specifiškais mirtingumo
-    rodikliais.
+## Data
 
--   Įvairių regionų bendresnius mirtingumo profilius, juos palyginti
-    tarpusavyje.
 
-## Duomenys
+Data on Songs from Billboard 1999-2019 from [kaggle](https://www.kaggle.com/danield2255/data-on-songs-from-billboard-19992019).
 
-Analizei atlikti naudoti 2 duomenų šaltiniai:
-
-1.  [Our World in Data](https://ourworldindata.com)
 
 <!-- -->
 
-    Istoriniai mirties priežasčių duomenys:
+    Info about each Hot 100 entry with variables such as:
+    • Song
+    • Artist
+    • Genre
+    • Weekly rank
+    • Weeks on chart
 
-    • šalis ar regionas
-    • metai
-    • 32 procentinės dalies mirčių dėl tam tikros priežasties kintamieji 
-    (širdies ligos, vėžiai, diabetas ir t.t.)
 
-2.  [United Nations Department of Economic and Social
-    Affairs](https://population.un.org/wpp/Download/Standard/CSV/)
+## Used R packages:
 
-<!-- -->
+- tidyverse
+- ggraph
+- here
+- hrbrthemes
+- gtools
+- RColorBrewer
 
-    Bendresni mirtingumo/gimstamumo duomenys (istoriniai ir ateities projekcija):
 
-    • šalis ar regionas
-    • laikmetis
-    • vyrų/moterų/bendra gyvenimo trukmė
-    • mirčių/gimimų skaičius 1000 gyventojų
-    • naujagimių/iki 5 metų mirtys 1000 gimimų
-    • kiti kintamieji
 
-## Naudoti R paketai:
+## Results
 
--   highcharter
--   tidyverse
--   hrbrthemes
--   countrycode
--   here
--   ggrepel
--   xaringan
-
-## Rezultatai
-
-Analizės rezultatus galima rasti [čia](docs/slides.html) (rezultatai
-pateikti skaidrių formatu).
+Results of the analysis can be found [here](docs/index.html).
